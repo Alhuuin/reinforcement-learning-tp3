@@ -90,7 +90,7 @@ def optimize_agent(env, agent_class, max_epsilon, name, n_episodes=1000,):
     all_mean_rewards = []
     epsilons = []
 
-    for e in np.arange(0.05, max_epsilon + 0.05, 0.05):
+    for e in np.arange(0., max_epsilon + 0.05, 0.05):
         rewards = []
         agent = agent_class(learning_rate=0.5, epsilon=e, gamma=0.99, legal_actions=list(range(env.action_space.n)))
 
@@ -106,7 +106,7 @@ def optimize_agent(env, agent_class, max_epsilon, name, n_episodes=1000,):
             best_epsilon = e
     
     create_epsilon_vs_reward_graph(epsilons, all_mean_rewards, name)
-    return best_epsilon, best_reward
+    return best_epsilon
 
 #################################################
 # 1. Play with QLearningAgent
@@ -145,8 +145,8 @@ def play_and_train(env: gym.Env, agent: QLearningAgent, t_max=int(1e4)) -> float
 # 1.2 - Optimization of Qlearning
 #################################
 print("start of the search for the best epsilon for qlearning")
-best_epsilon_q, best_reward_q = optimize_agent(env, QLearningAgent, 0.5, "rewards/evolution_of_mean_reward_for_qlearning.png")
-print("best epsilon found:", best_epsilon_q, "with the best reward:", best_reward_q)
+best_epsilon_q = optimize_agent(env, QLearningAgent, 0.5, "rewards/evolution_of_mean_reward_for_qlearning.png")
+print("best epsilon found:", best_epsilon_q)
 
 agent = QLearningAgent(
     learning_rate=0.5, epsilon=best_epsilon_q, gamma=0.99, legal_actions=list(range(n_actions))
@@ -159,7 +159,7 @@ for i in range(1000):
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
         animation = create_agent_animation(env, agent)
-        animation.save(f'animations/qlearning/taxi_agent_qlearning_{i%100}.gif', writer='pillow')
+        animation.save(f'animations/qlearning/taxi_agent_qlearning_{i}.gif', writer='pillow')
 
 end = time.time()
 print("end training qlearning in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
@@ -174,12 +174,8 @@ animation.save('animations/qlearning/taxi_agent_qlearning_after_learning.gif', w
 # 2. Play with QLearningAgentEpsScheduling
 #################################################
 
-print("start of the search for the best epsilon for qlearning_eps_scheduling")
-best_epsilon_q, best_reward_q = optimize_agent(env, QLearningAgentEpsScheduling, 0.5, "rewards/evolution_of_mean_reward_for_qlearning_eps_scheduling.png")
-print("best epsilon found:", best_epsilon_q, "with the best reward:", best_reward_q)
-
 agent = QLearningAgentEpsScheduling(
-    learning_rate=0.5, epsilon=best_epsilon_q, gamma=0.99, legal_actions=list(range(n_actions))
+    learning_rate=0.5, epsilon=0.25, gamma=0.99, legal_actions=list(range(n_actions))
 )
 
 rewards = []
@@ -189,7 +185,7 @@ for i in range(1000):
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
         animation = create_agent_animation(env, agent)
-        animation.save(f'animations/qlearning_eps_scheduling/taxi_agent_qlearning_eps_scheduling_{i%100}.gif', writer='pillow')
+        animation.save(f'animations/qlearning_eps_scheduling/taxi_agent_qlearning_eps_scheduling_{i}.gif', writer='pillow')
 end = time.time()
 
 print("end training qlearning eps scheduling in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
@@ -216,7 +212,7 @@ for i in range(1000):
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
         animation = create_agent_animation(env, agent)
-        animation.save(f'animations/sarsa/taxi_agent_sarsa_{i%100}.gif', writer='pillow')
+        animation.save(f'animations/sarsa/taxi_agent_sarsa_{i}.gif', writer='pillow')
 end = time.time()
 
 print("end training sarsa in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
