@@ -84,7 +84,7 @@ def create_agent_animation(env, agent, max_steps=200):
 # 0.2 - Optimization
 #################################################
 
-def optimize_agent(env, agent_class, max_epsilon, name, n_episodes=1000,):
+def optimize_agent(env, agent_class, max_epsilon, name, n_episodes=1000):
     best_epsilon = None
     best_reward = float('-inf')
     all_mean_rewards = []
@@ -145,7 +145,7 @@ def play_and_train(env: gym.Env, agent: QLearningAgent, t_max=int(1e4)) -> float
 # 1.2 - Optimization of Qlearning
 #################################
 print("start of the search for the best epsilon for qlearning")
-best_epsilon_q = optimize_agent(env, QLearningAgent, 0.5, "rewards/evolution_of_mean_reward_for_qlearning.png")
+best_epsilon_q = optimize_agent(env, QLearningAgent, 0.25, "rewards/evolution_of_mean_reward_for_qlearning.png")
 print("best epsilon found:", best_epsilon_q)
 
 agent = QLearningAgent(
