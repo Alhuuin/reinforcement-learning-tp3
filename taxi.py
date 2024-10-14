@@ -23,21 +23,94 @@ import gymnasium as gym
 import numpy as np
 from qlearning import QLearningAgent
 from qlearning_eps_scheduling import QLearningAgentEpsScheduling
-from sarsa import SARSAAgent
+from sarsa import SarsaAgent
+
+# for the animation
+import matplotlib.pyplot as plt
+from matplotlib.animation import ArtistAnimation
+
+# for the performances
+import time
 
 
 env = gym.make("Taxi-v3", render_mode="rgb_array")
 n_actions = env.action_space.n  # type: ignore
 
+#################################################
+# 0.1 Create graph and animation
+#################################################
+
+def create_scatter(rewards, name):
+    plt.figure(figsize=(10, 5))
+
+    plt.scatter(range(1000), rewards, color='blue', alpha=0.5, label='Episode Rewards')
+
+    plt.xlabel('Episodes')
+    plt.ylabel('Reward')
+    plt.title('Learning Curve: Rewards per Episode')
+    plt.legend()
+
+    plt.savefig(name)
+
+def create_epsilon_vs_reward_graph(epsilons, mean_rewards, name):
+    plt.figure(figsize=(10, 5))
+    plt.plot(epsilons, mean_rewards, marker='o')
+    plt.xlabel('Epsilon')
+    plt.ylabel('Mean Reward')
+    plt.title('Mean Reward for Epsilon')
+    plt.savefig(name)
+    plt.close()
+
+def create_agent_animation(env, agent, max_steps=200):
+    frames = []
+    fig, ax = plt.subplots()
+    
+    s, _ = env.reset()
+    for _ in range(max_steps):
+        frame = ax.imshow(env.render())
+        frames.append([frame])
+        
+        a = agent.get_action(s)
+        s, _, done, _, _ = env.step(a)
+        
+        if done:
+            break
+    
+    ani = ArtistAnimation(fig, frames, interval=200, blit=True)
+    plt.close()
+    return ani
+
+#################################################
+# 0.2 - Optimization
+#################################################
+
+def optimize_agent(env, agent_class, max_epsilon, name, n_episodes=1000,):
+    best_epsilon = None
+    best_reward = float('-inf')
+    all_mean_rewards = []
+    epsilons = []
+
+    for e in np.arange(0.05, max_epsilon + 0.05, 0.05):
+        rewards = []
+        agent = agent_class(learning_rate=0.5, epsilon=e, gamma=0.99, legal_actions=list(range(env.action_space.n)))
+
+        for _ in range(n_episodes):
+            rewards.append(play_and_train(env, agent))
+        
+        mean_reward = np.mean(rewards[-100:])
+        all_mean_rewards.append(mean_reward)
+        epsilons.append(e)
+
+        if mean_reward > best_reward:
+            best_reward = mean_reward
+            best_epsilon = e
+    
+    create_epsilon_vs_reward_graph(epsilons, all_mean_rewards, name)
+    return best_epsilon, best_reward
 
 #################################################
 # 1. Play with QLearningAgent
 #################################################
-
-agent = QLearningAgent(
-    learning_rate=0.5, epsilon=0.25, gamma=0.99, legal_actions=list(range(n_actions))
-)
-
 
 def play_and_train(env: gym.Env, agent: QLearningAgent, t_max=int(1e4)) -> float:
     """
@@ -57,38 +130,76 @@ def play_and_train(env: gym.Env, agent: QLearningAgent, t_max=int(1e4)) -> float
 
         # Train agent for state s
         # BEGIN SOLUTION
+        agent.update(s, a, r, next_s)
+        total_reward += r
+        
+        if done:
+            break
+            
+        s = next_s
         # END SOLUTION
 
     return total_reward
 
+#################################
+# 1.2 - Optimization of Qlearning
+#################################
+print("start of the search for the best epsilon for qlearning")
+best_epsilon_q, best_reward_q = optimize_agent(env, QLearningAgent, 0.5, "rewards/evolution_of_mean_reward_for_qlearning.png")
+print("best epsilon found:", best_epsilon_q, "with the best reward:", best_reward_q)
+
+agent = QLearningAgent(
+    learning_rate=0.5, epsilon=best_epsilon_q, gamma=0.99, legal_actions=list(range(n_actions))
+)
 
 rewards = []
+start = time.time()
 for i in range(1000):
     rewards.append(play_and_train(env, agent))
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
+        animation = create_agent_animation(env, agent)
+        animation.save(f'animations/qlearning/taxi_agent_qlearning_{i%100}.gif', writer='pillow')
+
+end = time.time()
+print("end training qlearning in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
 
 assert np.mean(rewards[-100:]) > 0.0
 # TODO: créer des vidéos de l'agent en action
+create_scatter(rewards, "rewards/rewards_qlearning.png")
+animation = create_agent_animation(env, agent)
+animation.save('animations/qlearning/taxi_agent_qlearning_after_learning.gif', writer='pillow')
 
 #################################################
 # 2. Play with QLearningAgentEpsScheduling
 #################################################
 
+print("start of the search for the best epsilon for qlearning_eps_scheduling")
+best_epsilon_q, best_reward_q = optimize_agent(env, QLearningAgentEpsScheduling, 0.5, "rewards/evolution_of_mean_reward_for_qlearning_eps_scheduling.png")
+print("best epsilon found:", best_epsilon_q, "with the best reward:", best_reward_q)
 
 agent = QLearningAgentEpsScheduling(
-    learning_rate=0.5, epsilon=0.25, gamma=0.99, legal_actions=list(range(n_actions))
+    learning_rate=0.5, epsilon=best_epsilon_q, gamma=0.99, legal_actions=list(range(n_actions))
 )
 
 rewards = []
+start = time.time()
 for i in range(1000):
     rewards.append(play_and_train(env, agent))
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
+        animation = create_agent_animation(env, agent)
+        animation.save(f'animations/qlearning_eps_scheduling/taxi_agent_qlearning_eps_scheduling_{i%100}.gif', writer='pillow')
+end = time.time()
+
+print("end training qlearning eps scheduling in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
 
 assert np.mean(rewards[-100:]) > 0.0
 
 # TODO: créer des vidéos de l'agent en action
+create_scatter(rewards, "rewards/rewards_qlearning_eps_scheduling.png")
+animation = create_agent_animation(env, agent)
+animation.save('animations/qlearning_eps_scheduling/taxi_agent_qlearning_eps_scheduling_after_learning.gif', writer='pillow')
 
 
 ####################
@@ -96,10 +207,22 @@ assert np.mean(rewards[-100:]) > 0.0
 ####################
 
 
-agent = SARSAAgent(learning_rate=0.5, gamma=0.99, legal_actions=list(range(n_actions)))
+agent = SarsaAgent(learning_rate=0.5, gamma=0.99, legal_actions=list(range(n_actions)))
 
 rewards = []
+start = time.time()
 for i in range(1000):
     rewards.append(play_and_train(env, agent))
     if i % 100 == 0:
         print("mean reward", np.mean(rewards[-100:]))
+        animation = create_agent_animation(env, agent)
+        animation.save(f'animations/sarsa/taxi_agent_sarsa_{i%100}.gif', writer='pillow')
+end = time.time()
+
+print("end training sarsa in", end-start, "secondes with mean reward", np.mean(rewards[-100:]))
+assert np.mean(rewards[-100:]) > 0.0
+
+# TODO: créer des vidéos de l'agent en action
+create_scatter(rewards, "rewards/rewards_sarsa.png")
+animation = create_agent_animation(env, agent)
+animation.save('animations/sarsa/taxi_agent_sarsa_after_learning.gif', writer='pillow')

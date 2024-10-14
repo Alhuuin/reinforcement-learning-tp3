@@ -47,6 +47,8 @@ class SarsaAgent:
         """
         value = 0.0
         # BEGIN SOLUTION
+        if len(self.legal_actions) > 0:
+            value = max(self.get_qvalue(state, action) for action in self.legal_actions)
         # END SOLUTION
         return value
 
@@ -55,12 +57,28 @@ class SarsaAgent:
     ):
         """
         You should do your Q-Value update here (s'=next_state):
-           TD_target(s') = R(s, a) + gamma * V(s')
+           TD_target(s') = R(s, a) + gamma * Q(s', a')
            TD_error(s', a) = TD_target(s') - Q(s, a)
            Q_new(s, a) := Q(s, a) + alpha * TD_error(s', a)
         """
         q_value = 0.0
         # BEGIN SOLUTION
+        td_target = float(reward) + self.gamma * self.get_value(next_state)
+        td_error = td_target - self.get_qvalue(state, action)
+
+        q_value = self.get_qvalue(state, action) + self.learning_rate * td_error
+        
+        # Valeur pour la Q-value actuelle
+        current_q = self.get_qvalue(state, action)
+        
+        # On récupère l'action suivante selon notre nouvel état
+        next_action = self.get_action(next_state)
+
+        # Après recherches, la bonne formule pour sarsa semble être R(s,a) + gamma * Q(s', a')
+        td_target = float(reward) + self.gamma * self.get_qvalue(next_state, next_action)
+        
+        td_error = td_target - current_q
+        q_value = current_q + self.learning_rate * td_error
         # END SOLUTION
 
         self.set_qvalue(state, action, q_value)
@@ -83,6 +101,7 @@ class SarsaAgent:
         action = self.legal_actions[0]
 
         # BEGIN SOLUTION
+        action = self.get_best_action(state)
         # END SOLUTION
 
         return action
